@@ -1,0 +1,72 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Deploy to production
+        uses: easingthemes/ssh-deploy@v5.1.0
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-az --delete --stats"
+          SOURCE: config/
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: ${{ secrets.REMOTE_TARGET }}/config/
+          SCRIPT_AFTER: |
+            export SUPERSET_CONFIG_PATH=${{ secrets.REMOTE_TARGET }}/config/superset_config.py
+            export FLASK_APP=superset
+            export SUPERSET_SECRET_KEY=${{ secrets.SUPERSET_SECRET_KEY }}
+            export SUPERSET_HOME=${{ secrets.REMOTE_TARGET }}
+
+            export DATABASE_DIALECT=postgres
+            export DATABASE_USER=${{ secrets.DATABASE_USER }}
+            export DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+            export DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+            export DATABASE_PORT=${{ secrets.DATABASE_PORT }}
+            export DATABASE_DB=${{ secrets.DATABASE_DB }}
+
+            export EXAMPLES_USER=${{ secrets.EXAMPLES_USER }}
+            export EXAMPLES_PASSWORD=${{ secrets.EXAMPLES_PASSWORD }}
+            export EXAMPLES_HOST=${{ secrets.EXAMPLES_HOST }}
+            export EXAMPLES_PORT=${{ secrets.EXAMPLES_PORT }}
+            export EXAMPLES_DB=${{ secrets.EXAMPLES_DB }}
+
+            export REDIS_USER=${{ secrets.REDIS_USER }}
+            export REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            export REDIS_HOST=${{ secrets.REDIS_HOST }}
+            export REDIS_PORT=${{ secrets.REDIS_PORT }}
+
+            cd ${{ secrets.REMOTE_TARGET }}
+
+            echo "this is a test" > test
+
+            echo "SUPERSET_SECRET_KEY: $SUPERSET_SECRET_KEY" > test
+            echo "DATABASE_DIALECT: $DATABASE_DIALECT" >> test
+            echo "DATABASE_USER: $DATABASE_USER" >> test
+            echo "DATABASE_PASSWORD: $DATABASE_PASSWORD" >> test
+            echo "DATABASE_HOST: $DATABASE_HOST" >> test
+            echo "DATABASE_PORT: $DATABASE_PORT" >> test
+            echo "DATABASE_DB: $DATABASE_DB" >> test
+            echo "EXAMPLES_USER: $EXAMPLES_USER" >> test
+            echo "EXAMPLES_PASSWORD: $EXAMPLES_PASSWORD" >> test
+            echo "EXAMPLES_HOST: $EXAMPLES_HOST" >> test
+            echo "EXAMPLES_PORT: $EXAMPLES_PORT" >> test
+            echo "EXAMPLES_DB: $EXAMPLES_DB" >> test
+            echo "REDIS_USER: $REDIS_USER" >> test
+            echo "REDIS_PASSWORD: $REDIS_PASSWORD" >> test
+            echo "REDIS_HOST: $REDIS_HOST" >> test
+            echo "REDIS_PORT: $REDIS_PORT" >> test
+
+            echo "PYENV_ROOT is $PYENV_ROOT"
+            . $PYENV_ROOT/versions/superset/bin/activate
+
+            pm2 reload config/ecosystem.config.js --update-env || pm2 start config/ecosystem.config.js
